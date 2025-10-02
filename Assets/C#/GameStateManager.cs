@@ -120,6 +120,13 @@ public class GameStateManager : MonoBehaviour
         Debug.Log("Card " + (cardsOnTable.Count) + ":" + cardToAdd.cardSuit.ToString() + "/" + cardToAdd.cardNumber);
         tableCards.Add(cardToAdd.cardSuit.ToString() + "/" + cardToAdd.cardNumber); //DEBUG
         baseCards.Remove(cardToAdd);
+
+        if (cardsOnTable.Count == 5) DetermineWinner();
+    }
+
+    public void DetermineWinner()
+    {
+
     }
 
     public void ResetCards(Card card) //return and reset cards, or create a whole new deck? new is less garbage?
