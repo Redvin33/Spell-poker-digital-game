@@ -6,10 +6,12 @@ public class PlayerScript
     [Header("Setup")]
     public string playerName;
     public int playerID;
-    public PlayerScript(string name, int startMana)
+    public PlayerScript(string name, int startMana, int id)
     {
         powerCards = new List<CardScript>();
+        baseCards = new List<Card>();
         currentMana = startMana;
+        playerID = id;
     }
 
     [Header("Mana")]
@@ -17,17 +19,15 @@ public class PlayerScript
 
     [Header("Cards")]
     public List<CardScript> powerCards;
-    public CardScript card1;
-    public CardScript card2;
+    public List<Card> baseCards;
 
 
     
     public void AddPowerCard(CardScript card) => powerCards.Add(card);
     public void RemovePowerCard(CardScript card) => powerCards.Remove(card);
-
-    public void AddCards(CardScript addcard1, CardScript addcard2)
+    public void AddCard(Card addedCard)
     {
-        card1 = addcard1;
-        card2 = addcard2;
+        baseCards.Add(addedCard);
+        Debug.Log("Gave player " + playerID + " card: " + addedCard.cardSuit.ToString() + "/" + addedCard.cardNumber);
     }
 }

@@ -2,12 +2,19 @@ using UnityEngine;
 
 public class CardScript : MonoBehaviour
 {
-    [Header("Card Parameters")]
-    public int number;
-    public SuitEnum suit;
+    public Card cardStats;
+    SpriteRenderer spriteRenderer;
+    bool hasEffect;
 
-    [Header("Art")]
-    [SerializeField] Sprite sprite;
-
-
+    private void Awake()
+    {
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        hasEffect = false;
+    }
+    public void AssignCard(Card card, Sprite baseSprite)
+    {
+        cardStats = card;
+        spriteRenderer.sprite = baseSprite;
+        if(card.cardEffect != null) hasEffect = true;
+    }
 }
