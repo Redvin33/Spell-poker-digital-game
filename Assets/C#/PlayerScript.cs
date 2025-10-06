@@ -6,12 +6,17 @@ public class PlayerScript
     [Header("Setup")]
     public string playerName;
     public int playerID;
+
+    public bool hasThreeOfAKind;
+    public bool hasOnePair;
+
     public PlayerScript(string name, int startMana, int id)
     {
         powerCards = new List<CardScript>();
         baseCards = new List<Card>();
         currentMana = startMana;
         playerID = id;
+        ResetTurn();
     }
 
     [Header("Mana")]
@@ -52,6 +57,9 @@ public class PlayerScript
     {
         highestHand = HandEnum.None;
         highestCard = 0;
+        hasThreeOfAKind = false;
+        hasOnePair = false;
+
         baseCards.Clear();
     }
 
