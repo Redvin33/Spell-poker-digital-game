@@ -14,6 +14,7 @@ public class PlayerScript
     {
         powerCards = new List<CardScript>();
         baseCards = new List<Card>();
+        playerName = name;
         currentMana = startMana;
         playerID = id;
         ResetTurn();
@@ -36,7 +37,6 @@ public class PlayerScript
     public void AddCard(Card addedCard)
     {
         baseCards.Add(addedCard);
-        Debug.Log("Gave player " + playerID + " card: " + addedCard.cardSuit.ToString() + "/" + addedCard.cardNumber);
     }
 
     public void AddMana(int amount) => currentMana += amount;
@@ -49,10 +49,7 @@ public class PlayerScript
         }
         return false;
     }
-    public void CheckHigherHand(HandEnum handToCheck)
-    {
-        if ((int)handToCheck > (int)highestHand) highestHand = handToCheck;
-    }
+    public void SetHighestHand(HandEnum hand) => highestHand = hand;
     public void ResetTurn()
     {
         highestHand = HandEnum.None;
