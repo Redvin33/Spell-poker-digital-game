@@ -60,13 +60,29 @@ public class GameStateManager : MonoBehaviour
     {
         CreateBaseDeck(cardsPerSuit, suitsAmount);
     }
+    #region DEBUG
+
+    [Header("Game Debug")]
+    public DebugGame debugGame;
     public void DebugStart()
     {
-        CreatePlayers(testPlayerCount, testStartMana, false);
-
-        //OPEN DEBUG TO ADD CARDS
+        CreateBaseDeckDebug(cardsPerSuit, suitsAmount);
     }
-
+    
+    public void CreateBaseDeckDebug(int cardsPerSuit, int suitsAmount) //Implement A, 2-14 or 1-13??
+    {
+        Debug.Log("??");
+        baseCards = new List<Card>();
+        for (int i = 0; i < suitsAmount; i++)
+        {
+            for (int j = 0; j < cardsPerSuit; j++)
+            {
+                baseCards.Add(new Card((SuitEnum)i, j + 2, null));
+            }
+        }
+        debugGame.StartDebugGame();
+    }
+    #endregion
     public void CreateBaseDeck(int cardsPerSuit, int suitsAmount) //Implement A, 2-14 or 1-13??
     {
         baseCards = new List<Card>();
@@ -74,7 +90,7 @@ public class GameStateManager : MonoBehaviour
         {
             for(int j = 0; j < cardsPerSuit; j++)
             {
-                baseCards.Add(new Card((SuitEnum)i, j + 1, null)); //j = 0 on start, +1 to make the first card 1 (==A?)
+                baseCards.Add(new Card((SuitEnum)i, j + 2, null)); //j = 0 on start, +2 to make the first card 2. 2-14.
                 //Each card gets func, send suit + num, return art accordingly.
             }
         }
@@ -183,13 +199,13 @@ public class GameStateManager : MonoBehaviour
     public void DetermineWinner()
     {
         Debug.Log("---------------------------------------------------------------");
-        Debug.Log("cards on table count: " + cardsOnTable.Count);
-        Debug.Log("players count: " + playerScripts.Count);
         PlayerScript winner = CheckWinner.DetermineWinner(cardsOnTable, playerScripts);
 
-        Debug.Log("Winner: " + winner.playerName.ToString());
-
-        Debug.Log("Hand: " + winner.highestHand.ToString());
+        if(winner == null)
+        {
+            Debug.Log("Tie, house wins? or split?");
+        }
+        else Debug.Log("Winner: " + winner.playerName.ToString() + ", with hand: " + winner.highestHand.ToString());
 
         ui.EnableNextRoundButton(true);
     }
@@ -211,6 +227,8 @@ public class GameStateManager : MonoBehaviour
             player2Cards.Clear();
         }
 
+
+        //If atleast 2 has mana, continue, else gameover
         StartGame();
     }
 

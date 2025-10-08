@@ -7,9 +7,6 @@ public class PlayerScript
     public string playerName;
     public int playerID;
 
-    public bool hasThreeOfAKind;
-    public bool hasOnePair;
-
     public PlayerScript(string name, int startMana, int id)
     {
         powerCards = new List<CardScript>();
@@ -54,9 +51,6 @@ public class PlayerScript
     {
         highestHand = HandEnum.None;
         highestCard = 0;
-        hasThreeOfAKind = false;
-        hasOnePair = false;
-
         baseCards.Clear();
     }
 

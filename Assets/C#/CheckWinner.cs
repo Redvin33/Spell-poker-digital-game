@@ -7,8 +7,7 @@ using UnityEditor.Experimental.GraphView;
 public static class CheckWinner
 {
     static List<Card> tableCards;
-    static PlayerScript currentWinner;
-    static HandEnum highestHand;
+
     static CheckWinner()
     {
         tableCards = new List<Card>();
@@ -17,13 +16,13 @@ public static class CheckWinner
     {
         tableCards = newTableCards;
 
-        Debug.Log("Determining winner, tablecards: " + tableCards.Count);
         for (int i = 0; i < players.Count; i++)
         {
             CheckPlayerHand(players[i]);
         }
 
         PlayerScript currentWinner = null;
+        List<PlayerScript> possibleTies = new List<PlayerScript>();
 
         for(int i = 0; i < players.Count; i++)
         {
@@ -32,17 +31,21 @@ public static class CheckWinner
                 if ((int)players[i].highestHand > (int)currentWinner.highestHand)
                 {
                     currentWinner = players[i];
+                    possibleTies.Clear();
                 }
                 else if((int)players[i].highestHand == (int)currentWinner.highestHand)
                 {
-                    //check highest card among hands... phew... throw list of cards and handenum to a function which return highest card for both, compare, declare winner.
-                    Debug.Log("There was a tie: " + currentWinner.highestHand.ToString());
+                    if (!possibleTies.Contains(players[i])) possibleTies.Add(players[i]);
+                    if (!possibleTies.Contains(currentWinner)) possibleTies.Add(currentWinner);
+                    currentWinner = null;
                 }
             }
             else currentWinner = players[i];
         }
         tableCards.Clear();
-        return currentWinner;
+
+        if(possibleTies.Count > 0) return TieBreaker.DetermineTie(tableCards, possibleTies);
+        else return currentWinner;
     }
 
 
@@ -62,20 +65,16 @@ public static class CheckWinner
 
             HandEnum flushType = CheckFlush(cardsToCheck);
 
-            if ((int)flushType > (int)currentHighestHand)
-            {
-                if(flushType == HandEnum.Flush)
-                {
-                    if(currentHighestHand != HandEnum.FourOfAKind)
-                    {
-                        if (CheckFullHouse(cardsToCheck)) currentHighestHand = HandEnum.FullHouse;
-                        else currentHighestHand = flushType;
-                    }
-                }
-                else currentHighestHand = flushType;
-            }
 
-            Debug.Log("Checked flushes and fullhouse, currenh highest: " + currentHighestHand.ToString());
+            if ((int)flushType > (int)currentHighestHand) currentHighestHand = flushType;
+
+            if((int)currentHighestHand < (int)HandEnum.FullHouse)
+            {
+                if (CheckFullHouse(cardsToCheck)) currentHighestHand = HandEnum.FullHouse;
+            }
+            
+
+            Debug.Log("Checked flushes and fullhouse, current highest: " + currentHighestHand.ToString());
             if((int)currentHighestHand < (int)HandEnum.TwoPair)
             {
                 Debug.Log("Checking two pairs");
@@ -93,18 +92,7 @@ public static class CheckWinner
 
     static HandEnum CheckSameValues(List<Card> cardsToCheck)
     {
-
         Dictionary<int, int> amountOfSameCards = new Dictionary<int, int>();
-
-        Debug.Log("Cards to check amount: " + cardsToCheck.Count);
-        for(int i = 0; i < cardsToCheck.Count; i++)
-        {
-            Debug.Log("Card: " + cardsToCheck[i].cardNumber.ToString() + "/" + cardsToCheck[i].cardSuit.ToString());
-        }
-
-
-
-
 
         for (int i = 0; i < cardsToCheck.Count; i++) //Check the dictionary, if has a Key of X, add +1, else, make a dictionary key with a value of 1
         {
@@ -125,7 +113,6 @@ public static class CheckWinner
             }
         }
 
-        Debug.Log("currentHighestSameCardNumber: " + currentHighestSameCardNumber.ToString());
         switch (currentHighestSameCardNumber)
         {
             case 5:
@@ -163,7 +150,7 @@ public static class CheckWinner
 
                     if (CheckStraight(flushCards))// check the list if it contains straight, if yes, check if the flush contains Ace. If no straight, return flush.
                     {
-                        if (HighestNumberAmongCards(flushCards) == 14) return HandEnum.RoyalFlush;
+                        if (HighestNumberAmongCards(flushCards) == 14) return HandEnum.RoyalFlush; //does this work? can it have more than 5? e.g straight 2-6 + A, returns royalflush.
                         else return HandEnum.StraightFlush;
                     }
                     else return HandEnum.Flush;
@@ -182,6 +169,7 @@ public static class CheckWinner
         for (int i = 0; i < cards.Count; i++)
         {
             numbers.Add(cards[i].cardNumber);
+            if (cards[i].cardNumber == 14) numbers.Add(1); //If the card is an Ace (=14), add 1. Ace = 1 & 14
         }
 
         numbers.Sort();
@@ -203,7 +191,6 @@ public static class CheckWinner
     static bool CheckFullHouse(List<Card> cards)
     {
         Dictionary<int, int> cardDic = new Dictionary<int, int>();
-
 
         for(int i = 0; i < cards.Count; i++)
         {
@@ -228,25 +215,20 @@ public static class CheckWinner
 
                         for (int k = 0; k < restOfCards.Count; k++)
                         {
-                            if (cardDic.ContainsKey(cards[k].cardNumber)) 
+                            if (cardDic.ContainsKey(cards[k].cardNumber))
                             {
-                                cards[k].cardNumber++;
-                                if (cards[k].cardNumber >= 2)
-                                {
-                                    return true;
-                                }
+                                cardDic[cards[k].cardNumber] ++;
+
+                                if (cardDic[cards[k].cardNumber] >= 2) return true;
                             }
                             else cardDic.Add(cards[k].cardNumber, 1);
                         }
                     }
                     else break;
-
                 }
             }
             else cardDic.Add(cards[i].cardNumber, 1);
         }
-
-
         return false;
     }
     static bool CheckTwoPairs(List<Card> cards)
@@ -269,49 +251,7 @@ public static class CheckWinner
 
         return pairs >= 2;
     }
-    static bool CheckIfBigger(PlayerScript player, HandEnum hand)
-    {
-        if ((int)hand > (int)highestHand)
-        {
-            highestHand = hand;
-            currentWinner = player;
-            return true;
-        }
-        else if ((int)hand == (int)highestHand)
-        {
-            if (player.highestCard > currentWinner.highestCard)
-            {
-                currentWinner = player;
-                return true;
-            }
-            else if (player.highestCard == currentWinner.highestCard)
-            {
-                currentWinner = null;
-            }
-        }
-        return false;
-    }
 
-
-    static Card HighestCardAmongSuits(List<Card> cards, SuitEnum firstSuit, SuitEnum secondSuit)
-    {
-        int highestNumber = 0;
-        Card highestCard = null;
-
-        for (int i = 0; i < cards.Count; i++)
-        {
-            if (cards[i].cardSuit == firstSuit || cards[i].cardSuit == secondSuit)
-            {
-                if (cards[i].cardNumber < highestNumber)
-                {
-                    highestNumber = cards[i].cardNumber;
-                    highestCard = cards[i];
-                }
-            }
-        }
-
-        return highestCard;
-    }
 
     static int HighestNumberAmongCards(List<Card> cards)
     {

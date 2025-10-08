@@ -22,7 +22,7 @@ public class UI : MonoBehaviour
     public void DebugStart()
     {
         EnableStartButtons(false);
-        gameStateManager.DefaultStart();
+        gameStateManager.DebugStart();
     }
 
     public void EnableNextRoundButton(bool enable) => nextRoundButton.SetActive(enable);
