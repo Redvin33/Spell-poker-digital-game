@@ -66,6 +66,7 @@ public class GameStateManager : MonoBehaviour
     public DebugGame debugGame;
     public void DebugStart()
     {
+        debugGame.enabled = true;
         CreateBaseDeckDebug(cardsPerSuit, suitsAmount);
     }
     

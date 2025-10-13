@@ -10,6 +10,7 @@ public enum HandEnum
     FullHouse,
     FourOfAKind,
     StraightFlush,
-    RoyalFlush,
     FiveOfAKind,
+    FlushHouse,
+    FlushFive,
 }

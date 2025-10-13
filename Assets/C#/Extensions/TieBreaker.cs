@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public static class TieBreaker
 {
@@ -11,7 +10,7 @@ public static class TieBreaker
         HandEnum tiedHand = tiedPlayers[0].highestHand;
 
 
-        if (tiedHand == HandEnum.RoyalFlush || tiedHand == HandEnum.FiveOfAKind) return null;
+        if (tiedHand == HandEnum.FiveOfAKind) return null;
         else if (tiedHand == HandEnum.StraightFlush) return CompareStraightFlush(tableCards, tiedPlayers);
         else if (tiedHand == HandEnum.FourOfAKind)
         {
@@ -19,7 +18,7 @@ public static class TieBreaker
         }
 
 
-      return null;
+        return null;
     }
 
     static PlayerScript CompareStraightFlush(List<Card> tableCards, List<PlayerScript> tiedPlayers)
@@ -29,7 +28,7 @@ public static class TieBreaker
         int biggestCard = 0;
         PlayerScript leadingPlayer = null;
 
-        for(int i = 0; i < tiedPlayers.Count; i++)
+        for (int i = 0; i < tiedPlayers.Count; i++)
         {
             int biggest = BiggestAmongSuits(tableCards, tiedPlayers[i], flushSuit);
             if (biggest > biggestCard)
@@ -50,7 +49,7 @@ public static class TieBreaker
 
         int leftOverFour = IsCommunityFour(tableCards);
 
-        if(leftOverFour != 0)
+        if (leftOverFour != 0)
         {
             //fours on community
             biggestNumber = leftOverFour;
@@ -70,14 +69,28 @@ public static class TieBreaker
         }
         else
         {
+            //Create func, which iteraters through all cards from highest to lowest, continue for ties.
+            Dictionary<PlayerScript, List<Card>> cardsToCheck = new Dictionary<PlayerScript, List<Card>>();
+
+            for(int i = 0; i < tiedPlayers.Count; i++)
+            {
+                List<Card> highestPlayerCards = new List<Card>();
+                cardsToCheck.Add(tiedPlayers[i], highestPlayerCards);
+            }
+
+
             for (int i = 0; i < tiedPlayers.Count; i++)
             {
+
+
+
                 int biggest = BiggestAmongSameNumbers(tableCards, tiedPlayers[i]);
-                if(biggest > biggestNumber)
+                if (biggest > biggestNumber)
                 {
                     biggestNumber = biggest;
                     leadingPlayer = tiedPlayers[i];
                 }
+                else if (biggest == biggestNumber) leadingPlayer = null;
             }
         }
 
@@ -97,9 +110,19 @@ public static class TieBreaker
 
 
 
-    static List<Card> GetAmountHighest(List<Card> cards, int amount)
+
+    static List<int> GetFiveHighestAscendingOrder(List<Card> cards, HandEnum hand)
     {
-        List<Card> toReturn = new List<Card>();
+        List<int> toReturn = new List<int>();
+
+        for (int i = 0; i < cards.Count; i++)
+        {
+            toReturn.Add(cards[i].cardNumber);
+        }
+        
+        toReturn.Sort();
+        toReturn.Remove(toReturn[0]);
+        toReturn.Remove(toReturn[0]);
 
 
         return toReturn;
