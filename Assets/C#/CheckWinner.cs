@@ -44,7 +44,7 @@ public static class CheckWinner
             }
             else currentWinner = players[i];
         }
-        tableCards.Clear();
+  
 
         if(possibleTies.Count > 0) return TieBreaker.DetermineTie(tableCards, possibleTies);
         else return currentWinner;
