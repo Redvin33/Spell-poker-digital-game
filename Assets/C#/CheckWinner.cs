@@ -14,7 +14,7 @@ public static class CheckWinner
     {
         tableCards = new List<Card>();
     }
-    public static PlayerScript DetermineWinner(List<Card> newTableCards, List<PlayerScript> players)
+    public static List<PlayerScript> DetermineWinner(List<Card> newTableCards, List<PlayerScript> players)
     {
         tableCards = newTableCards;
 
@@ -47,7 +47,12 @@ public static class CheckWinner
   
 
         if(possibleTies.Count > 0) return TieBreaker.DetermineTie(tableCards, possibleTies);
-        else return currentWinner;
+        else
+        {
+            possibleTies.Clear();
+            possibleTies.Add(currentWinner);
+            return possibleTies;
+        }
     }
 
 

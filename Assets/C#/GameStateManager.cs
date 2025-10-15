@@ -200,13 +200,14 @@ public class GameStateManager : MonoBehaviour
     public void DetermineWinner()
     {
         Debug.Log("---------------------------------------------------------------");
-        PlayerScript winner = CheckWinner.DetermineWinner(cardsOnTable, playerScripts);
+        List<PlayerScript> winner = new List<PlayerScript>(CheckWinner.DetermineWinner(cardsOnTable, playerScripts));
 
-        if(winner == null)
+        Debug.Log("DeterMinewinner winner count: " + winner.Count);
+        if(winner.Count > 1)
         {
-            Debug.Log("Tie, house wins? or split?");
+            Debug.Log("Split the pot between each winner, tied count: " + winner.Count);
         }
-        else Debug.Log("Winner: " + winner.playerName.ToString() + ", with hand: " + winner.highestHand.ToString());
+        else Debug.Log("Winner: " + winner[0].playerName.ToString() + ", with hand: " + winner[0].highestHand.ToString());
 
         ui.EnableNextRoundButton(true);
     }

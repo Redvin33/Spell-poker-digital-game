@@ -4,46 +4,64 @@ using UnityEngine;
 
 public static class TieBreaker
 {
-    public static PlayerScript DetermineTie(List<Card> tableCards, List<PlayerScript> tiedPlayers)
+    public static List<PlayerScript> DetermineTie(List<Card> tableCards, List<PlayerScript> tiedPlayers)
     {
+
         HandEnum tiedHand = tiedPlayers[0].highestHand;
-        if (tiedHand == HandEnum.FiveOfAKind || tiedHand == HandEnum.FlushFive) return null;
-        else if (tiedHand == HandEnum.StraightFlush) return CompareStraightFlush(tableCards, tiedPlayers);
+        if (tiedHand == HandEnum.FiveOfAKind || tiedHand == HandEnum.FlushFive) return new List<PlayerScript>();
+        else if (tiedHand == HandEnum.StraightFlush || tiedHand == HandEnum.Flush) return CompareFlush(tableCards, tiedPlayers);
         else if (tiedHand == HandEnum.FourOfAKind) return CompareSameAmount(tableCards, tiedPlayers, 4);
         else if (tiedHand == HandEnum.ThreeOfAKind) return CompareSameAmount(tableCards, tiedPlayers, 3);
         else if (tiedHand == HandEnum.OnePair) return CompareSameAmount(tableCards, tiedPlayers, 2);
         else if (tiedHand == HandEnum.HighCard) return CompareSameAmount(tableCards, tiedPlayers, 1);
         else if (tiedHand == HandEnum.FlushHouse || tiedHand == HandEnum.FullHouse) return CompareFullHouse(tableCards, tiedPlayers);
-        //and two pair, straight, flush
-        return null;
+        else if (tiedHand == HandEnum.TwoPair) return CompareTwoPair(tableCards, tiedPlayers);
+            //straight,
+
+            Debug.Log("returining empty");
+        return new List<PlayerScript>();
     }
 
-    static PlayerScript CompareStraightFlush(List<Card> tableCards, List<PlayerScript> tiedPlayers)
+    static List<PlayerScript> CompareFlush(List<Card> tableCards, List<PlayerScript> tiedPlayers)
     {
         SuitEnum flushSuit = MostSuits(tableCards);
+        List<PlayerScript> winners = new List<PlayerScript>();
+
+        for(int i = 0; i < tableCards.Count; i++)
+        {
+            Debug.Log("Table card " + (i + 1) + " is: " + tableCards[i].cardNumber);
+        }
+        for(int i = 0; i < tiedPlayers.Count; i++)
+        {
+            for (int j = 0; j < tiedPlayers[i].baseCards.Count; j++)
+            {
+                Debug.Log("Player " + tiedPlayers[i].playerName.ToString() + " card " + (i + 1) + " is: " + tiedPlayers[i].baseCards[j].cardNumber);
+            }
+
+        }
 
         int biggestCard = 0;
-        PlayerScript leadingPlayer = null;
 
         for (int i = 0; i < tiedPlayers.Count; i++)
         {
             int biggest = BiggestAmongSuits(tableCards, tiedPlayers[i], flushSuit);
+            Debug.Log("Biggest among suit:" + flushSuit.ToString() + ", on player: " + tiedPlayers[i].playerID.ToString() + ". Players biggest: " + biggest + ". And current Biggest: " + biggestCard + ". winners count: " + winners.Count);
             if (biggest > biggestCard)
             {
+                if(winners.Count > 0) winners.Clear();
                 biggestCard = biggest;
-                leadingPlayer = tiedPlayers[i];
+                winners.Add(tiedPlayers[i]);
             }
-            else if (biggest == biggestCard) leadingPlayer = null;
+            else if (biggest == biggestCard) winners.Add(tiedPlayers[i]);
         }
 
-        return leadingPlayer;
+        return winners;
     }
-
-    static PlayerScript CompareFullHouse(List<Card> tableCards, List<PlayerScript> tiedPlayers)
+    static List<PlayerScript> CompareFullHouse(List<Card> tableCards, List<PlayerScript> tiedPlayers)
     {
+        List<PlayerScript> winners = new List<PlayerScript>();
         Dictionary<PlayerScript, int> highestThree = new Dictionary<PlayerScript, int>();
         int biggest = 0;
-        PlayerScript winner = null;
 
         int amountToCheck = 3;
 
@@ -60,21 +78,23 @@ public static class TieBreaker
             {
                 if (highestThree[keys] > biggest)
                 {
+                    winners.Clear();
                     biggest = highestThree[keys];
-                    winner = keys;
+                    winners.Add(keys);
                 }
-                else if (highestThree[keys] == biggest) winner = null;
+                else if (highestThree[keys] == biggest) winners.Add(keys);
             }
 
-            if (winner == null)
+            if (winners.Count > 1)
             {
                 biggest = 0;
                 amountToCheck--;
                 highestThree.Clear();
+                winners.Clear();
             }
-            else return winner;
+            else return winners;
         }
-        return null;
+        return winners;
     }
     static int GetBiggestSameOfKinds(List<Card> checkFrom, int sameKindAmount)
     {
@@ -94,98 +114,159 @@ public static class TieBreaker
 
         return biggest;
     } 
-    static PlayerScript CompareSameAmount(List<Card> tableCards, List<PlayerScript> tiedPlayers, int sameKindAmount)
+    static List<PlayerScript> CompareSameAmount(List<Card> tableCards, List<PlayerScript> tiedPlayers, int sameKindAmount)
     {
+        List<PlayerScript> winners = new List<PlayerScript>();
 
-        //LEFT HERE!
         Dictionary<PlayerScript, int> highestOfSame = new Dictionary<PlayerScript, int>();
+        Dictionary<PlayerScript, List<Card>> playerCards = new Dictionary<PlayerScript, List<Card>>();
 
         int biggestNumber = 0;
-        PlayerScript leadingPlayer = null;
 
 
         for (int i = 0; i < tiedPlayers.Count; i++)
         {
-            List<Card> playerCards = new List<Card>(tableCards);
-            playerCards.AddRange(tiedPlayers[i].baseCards);
-            highestOfSame.Add(tiedPlayers[i], GetBiggestSameOfKinds(playerCards, sameKindAmount));
+            playerCards.Add(tiedPlayers[i], new List<Card>(tableCards));
+            playerCards[tiedPlayers[i]].AddRange(tiedPlayers[i].baseCards);
+            highestOfSame.Add(tiedPlayers[i], GetBiggestSameOfKinds(playerCards[tiedPlayers[i]], sameKindAmount));
         }
 
         foreach (var keys in highestOfSame.Keys)
         {
             if (highestOfSame[keys] > biggestNumber)
             {
+                winners.Clear();
                 biggestNumber = highestOfSame[keys];
-                leadingPlayer = keys;
+                winners.Add(keys);
             }
-            else if (highestOfSame[keys] == biggestNumber) leadingPlayer = null;
+            else if (highestOfSame[keys] == biggestNumber) winners.Add(keys);
         }
+        Debug.Log("First check on samekindamount, winenr count: " + winners.Count);
 
-        if (leadingPlayer != null) return leadingPlayer;
+        if (winners.Count == 1) return winners;
         else
         {
-            return null;
+
+            Dictionary<PlayerScript, List<int>> otherCards = new Dictionary<PlayerScript, List<int>>();
+            int leftOver = 5 - sameKindAmount;
+
+            for(int i = 0;i < winners.Count; i++)
+            {
+                foreach(var keys in playerCards.Keys)
+                {
+                    if (winners[i] == keys)
+                    {
+                        List<int> cardsToCheck = new List<int>();
+
+                        for (int j = 0; j < playerCards[keys].Count; j++)
+                        {
+                            if (playerCards[keys][j].cardNumber != biggestNumber)
+                            {
+                                cardsToCheck.Add(playerCards[keys][j].cardNumber);
+                            }
+                        }
+                        cardsToCheck.Sort();
+                        cardsToCheck.Reverse();
+
+                        otherCards.Add(keys, new List<int>(cardsToCheck));
+                        break;
+                    }
+                }
+            }
+
+
+            winners.Clear();
+            List<PlayerScript> previousWinners = new List<PlayerScript>();
+            for( int i = 0; i < leftOver; i++)
+            {
+                biggestNumber = 0;
+                foreach (var keys in otherCards.Keys)
+                {
+                    if (otherCards[keys][i] > biggestNumber)
+                    {
+                        if(winners.Count > 0) winners.Clear();
+                        biggestNumber = otherCards[keys][i];
+                        winners.Add(keys);
+                    }
+                    else if (otherCards[keys][i] == biggestNumber) winners.Add(keys);
+                }
+                Debug.Log("Leftover check, leftover: " + leftOver + ". At the end of iteration, winenr amount: " + winners.Count);
+                if (winners.Count == 1) return winners;
+                else if(winners.Count > 0)
+                {
+                    if (previousWinners.Count > 0) previousWinners.Clear();
+                    previousWinners.AddRange(winners);
+                }
+
+            }
+
+            Debug.Log("Returning count on cehck same amount: " + winners.Count);
+            if (previousWinners.Count > 0) return previousWinners;
+            else return winners;
+        }
+    }
+    static List<PlayerScript> CompareTwoPair(List<Card> tableCards, List<PlayerScript> tiedPlayers)
+    {
+        List<PlayerScript> winners = new List<PlayerScript>();
+
+        //Check each pair, determine if anyone has the highest, then the second pair, and lastly the biggest card.
+        Dictionary<PlayerScript, List<int>> pairs = new Dictionary<PlayerScript, List<int>>(); //list, first two are pairs, last one is leftover.
+
+        for(int i = 0; i < tiedPlayers.Count; i++)
+        {
+            List<Card> cardsToCheck = new List<Card>(tableCards);
+            cardsToCheck.AddRange(tiedPlayers[i].baseCards);
+            Dictionary<int, int> cards = new Dictionary<int, int>();
+
+            pairs.Add(tiedPlayers[i], new List<int>());
+
+            for (int j = 0; j < cardsToCheck.Count; j++)
+            {
+                if (cards.ContainsKey(cardsToCheck[j].cardNumber)) cards[cardsToCheck[j].cardNumber]++;
+                else cards.Add(cardsToCheck[j].cardNumber, 1);
+            }
+
+            foreach(var keys in cards.Keys)
+            {
+                if (cards[keys] == 2) pairs[tiedPlayers[i]].Add(keys);
+            }
+
+            if (pairs[tiedPlayers[i]].Count > 2)
+            {
+                //determine 2 biggest pairs
+                
+            }
+
+            pairs[tiedPlayers[i]].Sort();
+            pairs[tiedPlayers[i]].Reverse();
         }
 
-        // int leftOverFour = IsCommunityFour(tableCards);
+        int biggest = 0;
+        winners.Clear();
+        List<PlayerScript> previousWinners = new List<PlayerScript>();
 
-        // if (leftOverFour != 0)
-        // {
-        //     //fours on community
-        //     biggestNumber = leftOverFour;
+        for (int i = 0; i < 3; i++)
+        {
+            biggest = 0;
+            for (int j = 0; j < tiedPlayers.Count; j++)
+            {
+                if (pairs[tiedPlayers[j]][i] > biggest)
+                {
+                    if (winners.Count > 0) winners.Clear();
+                    biggest = pairs[tiedPlayers[j]][i];
+                    winners.Add(tiedPlayers[j]);
+                }
+                else if(pairs[tiedPlayers[j]][i] == biggest) winners.Add(tiedPlayers[j]);
+            }
 
-        //     for (int i = 0; i < tiedPlayers.Count; i++)
-        //     {
-        //         for (int j = 0; j < tiedPlayers[i].baseCards.Count; j++)
-        //         {
-        //             if (tiedPlayers[i].baseCards[j].cardNumber > biggestNumber)
-        //             {
-        //                 biggestNumber = tiedPlayers[i].baseCards[j].cardNumber;
-        //                 leadingPlayer = tiedPlayers[i];
-        //             }
-        //             else if (tiedPlayers[i].baseCards[j].cardNumber == biggestNumber && leadingPlayer != tiedPlayers[i]) leadingPlayer = null;
-        //         }
-        //     }
-        // }
-        // else
-        // {
-        //     //Create func, which iteraters through all cards from highest to lowest, continue for ties.
-        //     Dictionary<PlayerScript, List<Card>> cardsToCheck = new Dictionary<PlayerScript, List<Card>>();
-
-        //     for(int i = 0; i < tiedPlayers.Count; i++)
-        //     {
-        //         List<Card> highestPlayerCards = new List<Card>();
-        //         cardsToCheck.Add(tiedPlayers[i], highestPlayerCards);
-        //     }
-
-
-        //     for (int i = 0; i < tiedPlayers.Count; i++)
-        //     {
-
-
-
-        //         int biggest = BiggestAmongSameNumbers(tableCards, tiedPlayers[i]);
-        //         if (biggest > biggestNumber)
-        //         {
-        //             biggestNumber = biggest;
-        //             leadingPlayer = tiedPlayers[i];
-        //         }
-        //         else if (biggest == biggestNumber) leadingPlayer = null;
-        //     }
-        // }
-
-
-
-        // return leadingPlayer;
-    }
-
-    static PlayerScript ComparePair(List<Card> tableCards, PlayerScript currentWinner, PlayerScript player2)
-    {
-
-        //???
-
-
-        return currentWinner;
+            if (winners.Count == 1) return winners;
+            else if(winners.Count > 0)
+            {            
+                if (previousWinners.Count > 0) previousWinners.Clear();
+                previousWinners.AddRange(previousWinners);            
+            }
+        }
+        return winners;
     }
 
 
@@ -205,51 +286,6 @@ public static class TieBreaker
 
         return toReturn;
     }
-    //static bool CheckIfBigger(PlayerScript player, HandEnum hand)
-    //{
-    //    if ((int)hand > (int)highestHand)
-    //    {
-    //        highestHand = hand;
-    //        currentWinner = player;
-    //        return true;
-    //    }
-    //    else if ((int)hand == (int)highestHand)
-    //    {
-    //        if (player.highestCard > currentWinner.highestCard)
-    //        {
-    //            currentWinner = player;
-    //            return true;
-    //        }
-    //        else if (player.highestCard == currentWinner.highestCard)
-    //        {
-    //            currentWinner = null;
-    //        }
-    //    }
-    //    return false;
-    //}
-
-
-    //static Card HighestCardAmongSuits(List<Card> cards, SuitEnum firstSuit, SuitEnum secondSuit)
-    //{
-    //    int highestNumber = 0;
-    //    Card highestCard = null;
-
-    //    for (int i = 0; i < cards.Count; i++)
-    //    {
-    //        if (cards[i].cardSuit == firstSuit || cards[i].cardSuit == secondSuit)
-    //        {
-    //            if (cards[i].cardNumber < highestNumber)
-    //            {
-    //                highestNumber = cards[i].cardNumber;
-    //                highestCard = cards[i];
-    //            }
-    //        }
-    //    }
-
-    //    return highestCard;
-    //}
-
-
     static SuitEnum MostSuits(List<Card> cards)
     {
         Dictionary<SuitEnum, int> suits = new Dictionary<SuitEnum, int>();
@@ -280,41 +316,18 @@ public static class TieBreaker
     }
     static int BiggestAmongSuits(List<Card> cards, PlayerScript player, SuitEnum suit)
     {
-        cards.AddRange(player.baseCards);
+        List<Card> cardsToCheck = new List<Card>();
+        cardsToCheck.AddRange(cards);
+        cardsToCheck.AddRange(player.baseCards);
+
         int biggest = 0;
 
-        for(int i = 0; i < cards.Count; i++)
+        for(int i = 0; i < cardsToCheck.Count; i++)
         {
-            if (cards[i].cardSuit == suit && cards[i].cardNumber > biggest) biggest = cards[i].cardNumber;
+            if (cardsToCheck[i].cardSuit == suit && cardsToCheck[i].cardNumber > biggest) biggest = cardsToCheck[i].cardNumber;
         }
 
         return biggest;
-    }
-    static int IsCommunityFour(List<Card> cards)
-    {
-        Dictionary<int, int> values = new Dictionary<int, int>();
-        bool hasFour = false;
-        for(int i = 0;i < cards.Count;i++)
-        {
-            int cardNumber = cards[i].cardNumber;
-
-            if (values.ContainsKey(cardNumber))
-            {
-                values[cardNumber]++;
-                if (values[cardNumber] == 4) hasFour = true;
-
-            }
-            else values.Add(cardNumber, 1);
-        }
-
-        if(hasFour)
-        {
-            foreach(var keys in values.Keys)
-            {
-                if (values[keys] == 1) return values[keys];
-            }
-        }
-        return 0;
     }
     static int BiggestAmongSameNumbers(List<Card> cards, PlayerScript player) //check the highest amount of each number, and returns the biggest among the highest
     {
@@ -347,5 +360,15 @@ public static class TieBreaker
         }
 
         return biggestNumber;
+    }
+    static int GetBiggestCard(List<Card> cards)
+    {
+        int biggest = 0;
+
+        for(int i = 0; i < cards.Count; i++)
+        {
+            if (cards[i].cardNumber > biggest) biggest = cards[i].cardNumber;
+        }
+        return biggest;
     }
 }
