@@ -1,13 +1,14 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static UnityEngine.Rendering.GPUSort;
 
 public static class TieBreaker
 {
     public static List<PlayerScript> DetermineTie(List<Card> tableCards, List<PlayerScript> tiedPlayers)
     {
-
         HandEnum tiedHand = tiedPlayers[0].highestHand;
+
         if (tiedHand == HandEnum.FiveOfAKind || tiedHand == HandEnum.FlushFive) return new List<PlayerScript>();
         else if (tiedHand == HandEnum.StraightFlush || tiedHand == HandEnum.Flush) return CompareFlush(tableCards, tiedPlayers);
         else if (tiedHand == HandEnum.FourOfAKind) return CompareSameAmount(tableCards, tiedPlayers, 4);
@@ -15,13 +16,12 @@ public static class TieBreaker
         else if (tiedHand == HandEnum.OnePair) return CompareSameAmount(tableCards, tiedPlayers, 2);
         else if (tiedHand == HandEnum.HighCard) return CompareSameAmount(tableCards, tiedPlayers, 1);
         else if (tiedHand == HandEnum.FlushHouse || tiedHand == HandEnum.FullHouse) return CompareFullHouse(tableCards, tiedPlayers);
+        else if (tiedHand == HandEnum.Straight || tiedHand == HandEnum.StraightFlush) return CompareStraight(tableCards, tiedPlayers);
         else if (tiedHand == HandEnum.TwoPair) return CompareTwoPair(tableCards, tiedPlayers);
-            //straight,
 
-            Debug.Log("returining empty");
+        Debug.Log("returining empty");
         return new List<PlayerScript>();
     }
-
     static List<PlayerScript> CompareFlush(List<Card> tableCards, List<PlayerScript> tiedPlayers)
     {
         SuitEnum flushSuit = MostSuits(tableCards);
@@ -94,6 +94,61 @@ public static class TieBreaker
             }
             else return winners;
         }
+        return winners;
+    }
+    static List<PlayerScript> CompareStraight(List<Card> tableCards, List<PlayerScript> tiedPlayers)
+    {
+        List<PlayerScript> winners = new List<PlayerScript>();
+        Dictionary<PlayerScript, List<int>> playerCards = new Dictionary<PlayerScript, List<int>>();
+        int biggest = 0;
+
+        for(int i = 0; i < tiedPlayers.Count; i++)
+        {
+            List<Card> cardsToCheck = new List<Card>(tableCards);
+            cardsToCheck.AddRange(tiedPlayers[i].baseCards);
+
+
+            for (int j = 0; j < cardsToCheck.Count; j++)
+            {
+                playerCards[tiedPlayers[i]].Add(cardsToCheck[j].cardNumber);
+                if (cardsToCheck[j].cardNumber == 14) playerCards[tiedPlayers[i]].Add(1); //If the card is an Ace (=14), add 1. Ace = 1 & 14
+            }
+
+            playerCards[tiedPlayers[i]].Sort();
+            playerCards[tiedPlayers[i]].Reverse();
+
+            int counter = 0;
+            int startingCard = 0;
+
+            for (int j = 0; j < playerCards[tiedPlayers[i]].Count; j++)
+            {
+                if (playerCards[tiedPlayers[i]][j] != playerCards[tiedPlayers[i]].Last())
+                {
+                    if (playerCards[tiedPlayers[i]][j] == playerCards[tiedPlayers[i]][j + 1] + 1)
+                    {
+                        if (counter == 0)
+                        {
+                            counter += 2;
+                            startingCard = playerCards[tiedPlayers[i]][j];
+                        }
+                        else counter++;
+                    }
+                    else counter = 0;
+                }
+            }
+
+            if(counter >= 5)
+            {
+                if(playerCards[tiedPlayers[i]][0] > biggest)
+                {
+                    if (winners.Count > 0) winners.Clear();
+                    biggest = startingCard;
+                    winners.Add(tiedPlayers[i]);
+                }
+                else if(playerCards[tiedPlayers[i]][0] == biggest) winners.Add(tiedPlayers[i]);
+            }
+        }
+
         return winners;
     }
     static int GetBiggestSameOfKinds(List<Card> checkFrom, int sameKindAmount)
@@ -208,70 +263,68 @@ public static class TieBreaker
     static List<PlayerScript> CompareTwoPair(List<Card> tableCards, List<PlayerScript> tiedPlayers)
     {
         List<PlayerScript> winners = new List<PlayerScript>();
-
-        //Check each pair, determine if anyone has the highest, then the second pair, and lastly the biggest card.
-        Dictionary<PlayerScript, List<int>> pairs = new Dictionary<PlayerScript, List<int>>(); //list, first two are pairs, last one is leftover.
+        List<TwoPairHelper> helpers = new List<TwoPairHelper>();
 
         for(int i = 0; i < tiedPlayers.Count; i++)
         {
             List<Card> cardsToCheck = new List<Card>(tableCards);
             cardsToCheck.AddRange(tiedPlayers[i].baseCards);
-            Dictionary<int, int> cards = new Dictionary<int, int>();
 
-            pairs.Add(tiedPlayers[i], new List<int>());
+            TwoPairHelper current = new TwoPairHelper(tiedPlayers[i]);
+            helpers.Add(current);
 
             for (int j = 0; j < cardsToCheck.Count; j++)
             {
-                if (cards.ContainsKey(cardsToCheck[j].cardNumber)) cards[cardsToCheck[j].cardNumber]++;
-                else cards.Add(cardsToCheck[j].cardNumber, 1);
+                if (current.cardPerNumber.ContainsKey(cardsToCheck[j].cardNumber)) current.cardPerNumber[cardsToCheck[j].cardNumber]++;
+                else current.cardPerNumber.Add(cardsToCheck[j].cardNumber, 1);
             }
 
-            foreach(var keys in cards.Keys)
-            {
-                if (cards[keys] == 2) pairs[tiedPlayers[i]].Add(keys);
-            }
-
-            if (pairs[tiedPlayers[i]].Count > 2)
-            {
-                //determine 2 biggest pairs
-                
-            }
-
-            pairs[tiedPlayers[i]].Sort();
-            pairs[tiedPlayers[i]].Reverse();
+            current.CheckPairs();
         }
 
-        int biggest = 0;
-        winners.Clear();
+        int biggest;
         List<PlayerScript> previousWinners = new List<PlayerScript>();
 
-        for (int i = 0; i < 3; i++)
+        for (int i = 0; i < 2; i++)
         {
             biggest = 0;
-            for (int j = 0; j < tiedPlayers.Count; j++)
+
+            for (int j = 0; j < helpers.Count; j++)
             {
-                if (pairs[tiedPlayers[j]][i] > biggest)
+                if (helpers[j].GetPairIteration(i) > biggest)
                 {
                     if (winners.Count > 0) winners.Clear();
-                    biggest = pairs[tiedPlayers[j]][i];
-                    winners.Add(tiedPlayers[j]);
+                    biggest = helpers[j].GetPairIteration(i);
+                    winners.Add(helpers[j].player);
                 }
-                else if(pairs[tiedPlayers[j]][i] == biggest) winners.Add(tiedPlayers[j]);
+                else if(helpers[j].GetPairIteration(i) == biggest) winners.Add(helpers[j].player);
             }
 
             if (winners.Count == 1) return winners;
             else if(winners.Count > 0)
             {            
                 if (previousWinners.Count > 0) previousWinners.Clear();
-                previousWinners.AddRange(previousWinners);            
+                previousWinners.AddRange(winners);            
+            }
+        }
+
+        if(winners.Count > 1)
+        {
+            biggest = 0;
+
+            for (int j = 0; j < helpers.Count; j++)
+            {
+                if (helpers[j].leftOver > biggest)
+                {
+                    if (winners.Count > 0) winners.Clear();
+                    biggest = helpers[j].leftOver;
+                    winners.Add(helpers[j].player);
+                }
+                else if (helpers[j].leftOver == biggest) winners.Add(helpers[j].player);
             }
         }
         return winners;
     }
-
-
-
-
     static List<int> GetFiveHighestDescendingOrder(List<Card> cards)
     {
         List<int> toReturn = new List<int>();

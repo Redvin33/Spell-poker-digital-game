@@ -75,6 +75,13 @@ public static class CheckWinner
 
             HandEnum fullHouse = CheckFullHouse(cardsToCheck);
             if ((int)fullHouse > (int)currentHighestHand) currentHighestHand = fullHouse;
+
+            if(CheckStraight(cardsToCheck))
+            {
+                if((int)HandEnum.Straight > (int)currentHighestHand) currentHighestHand = HandEnum.Straight;
+            }
+
+
             Debug.Log("Checked fullhouse, returned: " + fullHouse.ToString());
             Debug.Log("Checked flushes and fullhouse, current highest: " + currentHighestHand.ToString());
             if((int)currentHighestHand < (int)HandEnum.TwoPair)
@@ -201,19 +208,27 @@ public static class CheckWinner
         return HandEnum.None;
     }
 
-    static bool CheckStraight(List<Card> cards)
+    static bool CheckStraight(List<Card> cards) //how to add suit check?
     {
         List<int> numbers = new List<int>();
+        
+        Dictionary<int, Card> cardsToCheck = new Dictionary<int, Card>(); //LEFT HERE
 
         for (int i = 0; i < cards.Count; i++)
         {
             numbers.Add(cards[i].cardNumber);
             if (cards[i].cardNumber == 14) numbers.Add(1); //If the card is an Ace (=14), add 1. Ace = 1 & 14
+
+
+
+            cardsToCheck.Add(cards[i].cardNumber, cards[i]);
+            if (cards[i].cardNumber == 14) cardsToCheck.Add(1, new Card(cards[i].cardSuit, 1, null));
         }
 
         numbers.Sort();
         numbers.Reverse();
         int counter = 0;
+
 
         for (int i = 0; i < numbers.Count; i++)
         {
@@ -221,14 +236,21 @@ public static class CheckWinner
             {
                 if (numbers[i] == numbers[i + 1] + 1)
                 {
-                    if (counter == 0) counter += 2;
+                    if (counter == 0)
+                    {
+                        counter += 2;
+                    }
                     else counter++;
                 }
                 else counter = 0;
             }
         }
 
-        if (counter >= 5) return true;
+        if (counter >= 5)
+        {
+            Debug.Log("player has straight");
+            return true;
+        }
         else return false;
     }
 
